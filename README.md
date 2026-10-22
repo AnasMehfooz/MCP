@@ -1,5 +1,7 @@
 # Headless AI Store
 
+[![tests](https://github.com/AnasMehfooz/MCP/actions/workflows/tests.yml/badge.svg)](https://github.com/AnasMehfooz/MCP/actions/workflows/tests.yml)
+
 A local e-commerce backend where **Claude Desktop is the frontend**. Claude manages the catalog through MCP tools; the same logic is also exposed as a REST API.
 
 ```text
@@ -121,3 +123,9 @@ Set them in Claude Desktop via an `"env": {...}` block next to `"args"`.
 - Alembic migrations once the schema changes
 - MCP resources (e.g. `store://catalog`) so Claude can read the catalog without a tool call
 - Human confirmation for large price changes via MCP elicitation
+
+## License
+
+MIT, see [LICENSE](LICENSE).
+
+Built with AI pair programming (Claude).
