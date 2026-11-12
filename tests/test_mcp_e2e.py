@@ -1,6 +1,7 @@
 """End-to-end: launches the MCP server as a subprocess over stdio, exactly like Claude Desktop,
 and calls its tools through the official MCP client."""
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -21,7 +22,8 @@ async def _session_calls(db_path: Path) -> dict:
     results = {}
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as client:
-            await client.initialize()
+            init = await client.initialize()
+            results["instructions"] = init.instructions
             results["tools"] = sorted(t.name for t in (await client.list_tools()).tools)
             results["add"] = await client.call_tool(
                 "add_product", {"sku": "tshirt-blk-m", "name": "Black T-Shirt (M)", "price": 19.99, "initial_stock": 3}
@@ -37,6 +39,11 @@ def test_claude_desktop_style_session(tmp_path):
     r = anyio.run(_session_calls, tmp_path / "store.db")
 
     assert r["tools"] == ["add_product", "adjust_stock", "check_inventory", "update_price"]
+
+    # Instructions must only point Claude at tools that exist.
+    referenced = set(re.findall(r"\b[a-z]+_[a-z_]+\b", r["instructions"]))
+    assert referenced <= set(r["tools"]), referenced - set(r["tools"])
+    assert "check_inventory" in referenced
 
     assert not r["add"].is_error
     assert r["add"].structured_content["sku"] == "TSHIRT-BLK-M"

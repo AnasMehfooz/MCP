@@ -14,9 +14,9 @@ The MCP server calls the service layer **in-process** rather than calling FastAP
 
 ```text
 ai-store/
-├── server.py              Claude Desktop entry point (fixes sys.path for any cwd)
+├── server.py              Claude Desktop entry point for source checkouts
 ├── requirements.txt
-├── pyproject.toml         pytest config
+├── pyproject.toml         Package metadata, `ai-store` command, pytest config
 ├── store/
 │   ├── config.py          Absolute DB path, low-stock threshold (env-overridable)
 │   ├── db.py              Engine, WAL + foreign keys, session_scope()
@@ -26,8 +26,8 @@ ai-store/
 │   ├── api.py             FastAPI Engineer: REST adapter
 │   └── mcp_server.py      MCP Integrator: tools for Claude
 ├── scripts/seed.py        Demo data
-├── tests/                 services, API, and a real MCP stdio session
-└── data/store.db          Created on first run
+├── skills/store-manager/  Agent skill (SKILL.md) that teaches Claude the store workflows
+└── tests/                 services, API, config, and a real MCP stdio session
 ```
 
 ## Data model
@@ -50,19 +50,36 @@ Prices are integer cents, so 0.10 + 0.20 is exactly 0.30. Inventory sits in its 
 
 Domain errors (unknown SKU, duplicate SKU, insufficient stock, invalid input) are raised as `ToolError`, so Claude gets a readable message and can correct itself instead of the call crashing. Tools return Pydantic models, so Claude also receives structured output.
 
-## Setup
+## Quick install (no clone)
+
+Requires [uv](https://docs.astral.sh/uv/). Add this to `claude_desktop_config.json` (paths below) and restart Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "ai-store": {
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/AnasMehfooz/mcp", "ai-store"]
+    }
+  }
+}
+```
+
+The database is created at `~/.ai-store/store.db`. Claude Code: `claude mcp add ai-store -- uvx --from git+https://github.com/AnasMehfooz/mcp ai-store`.
+
+## Development setup
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate             # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 python -m scripts.seed             # optional demo products
-pytest                             # 12 tests, incl. an end-to-end MCP session
+pytest                             # 16 tests, incl. an end-to-end MCP session
 ```
 
 Requires **MCP Python SDK 2.x** (`MCPServer`). v1's `FastMCP` import does not exist in 2.x.
 
-## Connect Claude Desktop
+## Connect Claude Desktop from a source checkout
 
 Open *Settings → Developer → Edit Config*, or edit the file directly:
 
@@ -110,10 +127,14 @@ API and MCP server can run at the same time against the same database (WAL mode,
 
 | Env var | Default |
 | --- | --- |
-| `STORE_DB_PATH` | `<project>/data/store.db` |
+| `STORE_DB_PATH` | `~/.ai-store/store.db` (source checkouts keep using `<project>/data/store.db` if it already exists) |
 | `STORE_LOW_STOCK_THRESHOLD` | `5` |
 
 Set them in Claude Desktop via an `"env": {...}` block next to `"args"`.
+
+## Agent skill
+
+`skills/store-manager/SKILL.md` tells the agent when and how to use the tools: bulk CSV import with validation, inventory audits, recording sales, and price changes with confirmation above 20%. Copy the `store-manager` folder into `~/.claude/skills/` (Claude Code) or upload it as a skill in Claude Desktop.
 
 ## Next steps
 

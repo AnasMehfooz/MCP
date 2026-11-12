@@ -1,7 +1,31 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "ai-store"
-version = "0.1.0"
+version = "0.2.0"
+description = "Headless e-commerce backend managed by Claude through MCP tools"
+readme = "README.md"
 requires-python = ">=3.11"
+dependencies = [
+    "mcp>=2.3,<3",
+    "sqlalchemy>=2.0,<3",
+    "pydantic>=2.6,<3",
+]
+
+[project.optional-dependencies]
+api = ["fastapi>=0.110,<1", "uvicorn[standard]>=0.29"]
+dev = ["fastapi>=0.110,<1", "uvicorn[standard]>=0.29", "pytest>=8", "httpx>=0.27"]
+
+[project.scripts]
+ai-store = "store.mcp_server:main"
+
+[project.urls]
+Repository = "https://github.com/AnasMehfooz/mcp"
+
+[tool.setuptools.packages.find]
+include = ["store*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
