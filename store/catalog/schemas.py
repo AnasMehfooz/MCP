@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
@@ -12,14 +12,6 @@ Sku = Annotated[
     StringConstraints(strip_whitespace=True, to_upper=True, min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_-]+$"),
 ]
 Price = Annotated[Decimal, Field(gt=0, le=1_000_000, decimal_places=2, description="Price in EUR, e.g. 19.99")]
-
-
-def to_cents(price: Decimal) -> int:
-    return int((price * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
-
-
-def from_cents(cents: int) -> Decimal:
-    return (Decimal(cents) / 100).quantize(Decimal("0.01"))
 
 
 class ProductCreate(BaseModel):

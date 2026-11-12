@@ -42,7 +42,7 @@ SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
 
 
 def init_db(bind: Engine = engine) -> None:
-    from store import models  # noqa: F401  (register tables on Base.metadata)
+    from store.catalog import models  # noqa: F401  (register tables on Base.metadata)
 
     Base.metadata.create_all(bind)
 

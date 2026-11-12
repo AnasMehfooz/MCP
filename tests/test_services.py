@@ -3,8 +3,9 @@ from decimal import Decimal
 import pytest
 from pydantic import ValidationError
 
-from store import services
-from store.schemas import ProductCreate
+from store import errors
+from store.catalog import services
+from store.catalog.schemas import ProductCreate
 
 
 def _add(session, sku="TEE-1", price="19.99", stock=10):
@@ -20,7 +21,7 @@ def test_add_and_get_product(session):
 
 def test_duplicate_sku_rejected(session):
     _add(session)
-    with pytest.raises(services.DuplicateSku):
+    with pytest.raises(errors.DuplicateSku):
         _add(session)
 
 
@@ -31,14 +32,14 @@ def test_price_stored_without_float_error(session):
 
 
 def test_unknown_sku(session):
-    with pytest.raises(services.ProductNotFound):
+    with pytest.raises(errors.ProductNotFound):
         services.update_price(session, "NOPE", Decimal("1"))
 
 
 def test_stock_cannot_go_negative(session):
     _add(session, stock=2)
     assert services.adjust_stock(session, "TEE-1", -2).quantity == 0
-    with pytest.raises(services.InsufficientStock):
+    with pytest.raises(errors.InsufficientStock):
         services.adjust_stock(session, "TEE-1", -1)
 
 

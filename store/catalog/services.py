@@ -9,28 +9,11 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from store.catalog.models import Inventory, Product
+from store.catalog.schemas import PriceChange, ProductCreate, ProductOut
 from store.config import LOW_STOCK_THRESHOLD
-from store.models import Inventory, Product
-from store.schemas import PriceChange, ProductCreate, ProductOut, from_cents, to_cents
-
-
-class StoreError(Exception):
-    """Base for domain errors; the message is safe to show to users and to Claude."""
-
-
-class ProductNotFound(StoreError):
-    def __init__(self, sku: str) -> None:
-        super().__init__(f"No product with SKU '{sku}'.")
-
-
-class DuplicateSku(StoreError):
-    def __init__(self, sku: str) -> None:
-        super().__init__(f"A product with SKU '{sku}' already exists.")
-
-
-class InsufficientStock(StoreError):
-    def __init__(self, sku: str, available: int, requested: int) -> None:
-        super().__init__(f"Cannot remove {requested} of '{sku}': only {available} in stock.")
+from store.errors import DuplicateSku, InsufficientStock, ProductNotFound
+from store.money import from_cents, to_cents
 
 
 def _to_out(p: Product) -> ProductOut:

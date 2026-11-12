@@ -5,9 +5,10 @@ Run from the project root:  python -m scripts.seed
 
 from decimal import Decimal
 
-from store import services
+from store.catalog import services
+from store.catalog.schemas import ProductCreate
 from store.db import DATABASE_LABEL, init_db, session_scope
-from store.schemas import ProductCreate
+from store.errors import DuplicateSku
 
 DEMO = [
     ProductCreate(sku="TSHIRT-BLK-M", name="Black T-Shirt (M)", price=Decimal("19.99"), initial_stock=40),
@@ -23,7 +24,7 @@ def main() -> None:
             with session_scope() as session:
                 services.add_product(session, item)
             print(f"added   {item.sku}")
-        except services.DuplicateSku:
+        except DuplicateSku:
             print(f"exists  {item.sku}")
     print(f"database: {DATABASE_LABEL}")
 

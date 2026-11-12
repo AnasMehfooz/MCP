@@ -67,28 +67,36 @@ ignore = [
 known-first-party = ["store", "scripts"]
 
 # Architecture rules, checked by `lint-imports` (pre-commit and CI).
-# Written for today's flat layout; when store/ is split into one package per domain,
-# change the module lists (e.g. store.catalog.services, store.api, store.agents) and
-# keep the three rules.
+# Domain packages (store.<domain>.models / schemas / services) hold the business rules;
+# adapters (store.api, store.mcp_server, later store.agents) stay thin on top of them.
+# The wildcards cover every domain package, so a new domain needs no change here.
 [tool.importlinter]
 root_package = "store"
 include_external_packages = true
 
 [[tool.importlinter.contracts]]
-name = "Services, models and schemas never import adapters"
+name = "Domain code never imports adapters"
 type = "forbidden"
-source_modules = ["store.services", "store.models", "store.schemas", "store.db", "store.config"]
+source_modules = [
+    "store.*.models",
+    "store.*.schemas",
+    "store.*.services",
+    "store.config",
+    "store.db",
+    "store.errors",
+    "store.money",
+]
 forbidden_modules = ["store.api", "store.mcp_server"]
 
 [[tool.importlinter.contracts]]
 name = "Adapters import services, never models"
 type = "forbidden"
 source_modules = ["store.api", "store.mcp_server"]
-forbidden_modules = ["store.models"]
+forbidden_modules = ["store.*.models"]
 allow_indirect_imports = true # services importing models is fine; adapters doing it directly is not
 
 [[tool.importlinter.contracts]]
 name = "Business logic stays framework-free"
 type = "forbidden"
-source_modules = ["store.services", "store.models"]
+source_modules = ["store.*.models", "store.*.schemas", "store.*.services"]
 forbidden_modules = ["fastapi", "starlette", "mcp"]

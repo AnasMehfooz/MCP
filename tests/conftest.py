@@ -24,7 +24,7 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from store import models  # noqa: F401  (register tables on Base.metadata)
+from store.catalog import models  # noqa: F401  (register tables on Base.metadata)
 from store.db import Base, session_scope
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")

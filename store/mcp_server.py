@@ -18,10 +18,11 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from pydantic import Field, ValidationError
 
-from store import services
+from store.catalog import services
+from store.catalog.schemas import PriceChange, ProductCreate, ProductOut
 from store.config import LOW_STOCK_THRESHOLD
 from store.db import DATABASE_LABEL, init_db, session_scope
-from store.schemas import PriceChange, ProductCreate, ProductOut
+from store.errors import StoreError
 
 logging.basicConfig(stream=sys.stderr, level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("store.mcp")
@@ -48,7 +49,7 @@ def _run(fn, *args, **kwargs):
     try:
         with session_scope() as session:
             return fn(session, *args, **kwargs)
-    except services.StoreError as exc:
+    except StoreError as exc:
         raise ToolError(str(exc)) from exc
 
 

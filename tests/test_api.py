@@ -1,13 +1,14 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from store.api import app, get_session
+from store.api.app import app
+from store.api.deps import get_session
 from store.db import session_scope
 
 
 @pytest.fixture
 def client(session_factory, monkeypatch):
-    monkeypatch.setattr("store.api.init_db", lambda: None)
+    monkeypatch.setattr("store.api.app.init_db", lambda: None)
 
     def _session():
         with session_scope(session_factory) as s:
