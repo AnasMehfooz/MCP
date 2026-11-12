@@ -8,7 +8,11 @@ Resolution order:
 1. STORE_DB_PATH, if set.
 2. <project>/data/store.db, if it already exists (keeps data from source checkouts).
 3. ~/.ai-store/store.db (default for installed copies).
+
+STORE_DATABASE_URL, if set, replaces the SQLite file with any SQLAlchemy URL,
+e.g. postgresql+psycopg://store:store@localhost:5432/store (see docker-compose.yml).
 """
+
 from __future__ import annotations
 
 import os
@@ -28,6 +32,6 @@ def resolve_db_path(env: dict[str, str] | os._Environ[str] = os.environ) -> Path
 
 
 DB_PATH = resolve_db_path()
-DATABASE_URL = f"sqlite:///{DB_PATH}"
+DATABASE_URL = os.getenv("STORE_DATABASE_URL") or f"sqlite:///{DB_PATH}"
 
 LOW_STOCK_THRESHOLD = int(os.getenv("STORE_LOW_STOCK_THRESHOLD", "5"))

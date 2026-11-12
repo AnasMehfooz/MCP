@@ -2,11 +2,11 @@
 
 Run from the project root:  python -m scripts.seed
 """
+
 from decimal import Decimal
 
 from store import services
-from store.config import DB_PATH
-from store.db import init_db, session_scope
+from store.db import DATABASE_LABEL, init_db, session_scope
 from store.schemas import ProductCreate
 
 DEMO = [
@@ -25,7 +25,7 @@ def main() -> None:
             print(f"added   {item.sku}")
         except services.DuplicateSku:
             print(f"exists  {item.sku}")
-    print(f"database: {DB_PATH}")
+    print(f"database: {DATABASE_LABEL}")
 
 
 if __name__ == "__main__":

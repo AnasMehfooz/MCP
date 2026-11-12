@@ -5,6 +5,7 @@ Never print() here: anything on stdout corrupts the protocol. Logs go to stderr.
 
 Run manually for debugging:  python -m store.mcp_server
 """
+
 from __future__ import annotations
 
 import logging
@@ -18,8 +19,8 @@ from mcp.types import ToolAnnotations
 from pydantic import Field, ValidationError
 
 from store import services
-from store.config import DB_PATH, LOW_STOCK_THRESHOLD
-from store.db import init_db, session_scope
+from store.config import LOW_STOCK_THRESHOLD
+from store.db import DATABASE_LABEL, init_db, session_scope
 from store.schemas import PriceChange, ProductCreate, ProductOut
 
 logging.basicConfig(stream=sys.stderr, level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -35,7 +36,9 @@ mcp = MCPServer(
     ),
 )
 
-PriceArg = Annotated[Decimal, Field(gt=0, le=1_000_000, decimal_places=2, description="Price in EUR, max 2 decimals, e.g. 19.99")]
+PriceArg = Annotated[
+    Decimal, Field(gt=0, le=1_000_000, decimal_places=2, description="Price in EUR, max 2 decimals, e.g. 19.99")
+]
 READ_ONLY = ToolAnnotations(readOnlyHint=True, idempotentHint=True, openWorldHint=False)
 
 
@@ -70,7 +73,9 @@ def add_product(
 @mcp.tool(annotations=READ_ONLY)
 def check_inventory(
     sku: Annotated[str | None, Field(description="Check one product; omit to list all")] = None,
-    low_stock_only: Annotated[bool, Field(description="Only return products at or below the low-stock threshold")] = False,
+    low_stock_only: Annotated[
+        bool, Field(description="Only return products at or below the low-stock threshold")
+    ] = False,
 ) -> list[ProductOut]:
     """Show stock levels, prices and low-stock flags for one product or the whole catalog."""
     if sku:
@@ -97,7 +102,7 @@ def adjust_stock(
 
 def main() -> None:
     init_db()
-    log.info("ai-store MCP server starting, database: %s", DB_PATH)
+    log.info("ai-store MCP server starting, database: %s", DATABASE_LABEL)
     mcp.run()  # stdio transport
 
 

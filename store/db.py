@@ -1,5 +1,7 @@
 """Engine and session handling. The API and the MCP server are separate processes
-sharing one SQLite file, so WAL mode and a busy timeout are enabled."""
+sharing one SQLite file, so WAL mode and a busy timeout are enabled. With
+STORE_DATABASE_URL set (Postgres), the SQLite-specific setup is skipped."""
+
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -16,6 +18,9 @@ class Base(DeclarativeBase):
 
 
 def make_engine(url: str = DATABASE_URL) -> Engine:
+    if not url.startswith("sqlite"):
+        return create_engine(url, pool_pre_ping=True)
+
     if url == DATABASE_URL:
         DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
@@ -32,6 +37,7 @@ def make_engine(url: str = DATABASE_URL) -> Engine:
 
 
 engine = make_engine()
+DATABASE_LABEL = engine.url.render_as_string(hide_password=True)  # safe to log
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
 
 

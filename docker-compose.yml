@@ -1,0 +1,47 @@
+# Dev infrastructure only: Postgres (pgvector) and Phoenix tracing.
+# The app and Ollama run natively on the host; the app is containerized in phase 6.
+#
+#   docker compose up -d            start both
+#   docker compose up -d postgres   database only (saves RAM when not tracing)
+#   docker compose down -v          stop and wipe all data
+#
+# Ports bind to 127.0.0.1 only. Override credentials and ports in .env (see .env.example).
+name: ai-store
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-store}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-store}
+      POSTGRES_DB: ${POSTGRES_DB:-store}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    shm_size: 256m
+    mem_limit: 1g
+
+  phoenix:
+    image: arizephoenix/phoenix:version-20.27.0
+    restart: unless-stopped
+    environment:
+      # Traces go to Phoenix's own SQLite file, not the project's Postgres, to keep RAM low.
+      PHOENIX_WORKING_DIR: /mnt/data
+    ports:
+      - "127.0.0.1:${PHOENIX_PORT:-6006}:6006" # UI + OTLP over HTTP (/v1/traces)
+      - "127.0.0.1:${PHOENIX_GRPC_PORT:-4317}:4317" # OTLP over gRPC
+    volumes:
+      - phoenix:/mnt/data
+    mem_limit: 2g
+
+volumes:
+  pgdata:
+  phoenix:
