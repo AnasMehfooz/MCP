@@ -1,0 +1,112 @@
+{
+  "file": "sample_products.csv",
+  "note": "Lines are 1-based file lines; the header is line 1. One row per variant; rows sharing a handle form one product. Product-level text sits on a product's first row. material, care, weight_g and origin are not catalog columns and belong in products.attributes.",
+  "products": 30,
+  "rows": 57,
+  "products_with_problems": 10,
+  "problems": [
+    {
+      "id": 1,
+      "kind": "missing_price",
+      "handle": "canvas-tote-natural",
+      "lines": [
+        23
+      ],
+      "detail": "price is empty",
+      "expected": "reject row"
+    },
+    {
+      "id": 2,
+      "kind": "duplicate_sku",
+      "handle": "linen-apron-olive",
+      "lines": [
+        26,
+        27
+      ],
+      "detail": "SKU LOGO-MUG-WHT is already used by logo-mug",
+      "expected": "keep logo-mug, reject the linen-apron-olive row"
+    },
+    {
+      "id": 3,
+      "kind": "conflicting_variants",
+      "handle": "merino-beanie",
+      "lines": [
+        18,
+        19
+      ],
+      "detail": "two variants with Color=Grey, different SKU and price (29.00 vs 32.00)",
+      "expected": "reject the second row; the product keeps Grey at 29.00 and Rust"
+    },
+    {
+      "id": 4,
+      "kind": "missing_title",
+      "handle": "bamboo-socks-3pack",
+      "lines": [
+        38
+      ],
+      "detail": "title is empty on the product's only row",
+      "expected": "reject row"
+    },
+    {
+      "id": 5,
+      "kind": "negative_stock",
+      "handle": "enamel-pin-set",
+      "lines": [
+        43
+      ],
+      "detail": "stock is -4",
+      "expected": "reject row"
+    },
+    {
+      "id": 6,
+      "kind": "localized_price",
+      "handle": "ceramic-planter-s",
+      "lines": [
+        30
+      ],
+      "detail": "price is '24,90 €' (German decimal comma and currency symbol)",
+      "expected": "import as 2490 cents or reject; never 24 or 249000 cents"
+    },
+    {
+      "id": 7,
+      "kind": "zero_price",
+      "handle": "sticker-sheet",
+      "lines": [
+        44
+      ],
+      "detail": "price is 0.00; variants.price_cents must be > 0",
+      "expected": "reject row"
+    },
+    {
+      "id": 8,
+      "kind": "conflicting_attributes",
+      "handle": "organic-tee",
+      "lines": [
+        2,
+        5
+      ],
+      "detail": "material is '100% organic cotton' on three rows and '50% cotton, 50% polyester' on TEE-WHT-M",
+      "expected": "flag the product; material must not be silently taken from either row"
+    },
+    {
+      "id": 9,
+      "kind": "non_numeric_stock",
+      "handle": "wool-blanket",
+      "lines": [
+        32
+      ],
+      "detail": "stock is 'in stock'",
+      "expected": "reject row; the Green variant still imports"
+    },
+    {
+      "id": 10,
+      "kind": "missing_option_value",
+      "handle": "zip-hoodie",
+      "lines": [
+        10
+      ],
+      "detail": "Size is empty on one of three variant rows",
+      "expected": "reject row; M and XL still import"
+    }
+  ]
+}

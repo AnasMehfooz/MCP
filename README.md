@@ -74,8 +74,40 @@ python -m venv .venv
 .venv\Scripts\activate             # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 python -m scripts.seed             # optional demo products
-pytest                             # 16 tests, incl. an end-to-end MCP session
+pytest                             # 19 tests, incl. an end-to-end MCP session
 ```
+
+`pip install -e ".[dev]"` installs the same set plus the tooling below.
+
+### Lint, format and architecture checks
+
+```bash
+pre-commit install                 # once; then every commit runs the three checks below
+ruff check . && ruff format .      # lint (config in pyproject.toml) and format, 120 columns
+lint-imports                       # import-linter contracts: adapters -> services -> models, never back
+```
+
+### Postgres and tracing (Docker)
+
+`docker-compose.yml` runs Postgres 16 with pgvector and [Arize Phoenix](https://arize.com/docs/phoenix) for traces. The app itself still runs in your venv.
+
+```bash
+docker compose up -d               # Postgres on :5432, Phoenix UI on http://localhost:6006
+docker compose up -d postgres      # database only
+```
+
+The first start creates two databases with the `vector` extension: `store` (development) and `store_test` (pytest). Copy `.env.example` to `.env` to change credentials or ports.
+
+Run the same test suite on Postgres by setting `TEST_DATABASE_URL`; each test gets its own throwaway schema:
+
+```bash
+TEST_DATABASE_URL=postgresql+psycopg://store:store@localhost:5432/store_test pytest
+# PowerShell: $env:TEST_DATABASE_URL = "postgresql+psycopg://store:store@localhost:5432/store_test"; pytest
+```
+
+### Sample product sheet
+
+`scripts/sample_products.csv` is the importer's test fixture: 30 products (57 variant rows), 10 of them with a planted problem such as a missing price, a duplicate SKU or conflicting variants. `scripts/sample_products.problems.json` lists each problem with its file lines and the expected handling.
 
 Requires **MCP Python SDK 2.x** (`MCPServer`). v1's `FastMCP` import does not exist in 2.x.
 
@@ -128,6 +160,7 @@ API and MCP server can run at the same time against the same database (WAL mode,
 | Env var | Default |
 | --- | --- |
 | `STORE_DB_PATH` | `~/.ai-store/store.db` (source checkouts keep using `<project>/data/store.db` if it already exists) |
+| `STORE_DATABASE_URL` | unset (SQLite). Set a SQLAlchemy URL to use Postgres instead, e.g. `postgresql+psycopg://store:store@localhost:5432/store`; needs `pip install "ai-store[postgres]"` |
 | `STORE_LOW_STOCK_THRESHOLD` | `5` |
 
 Set them in Claude Desktop via an `"env": {...}` block next to `"args"`.
