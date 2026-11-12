@@ -16,7 +16,17 @@ dependencies = [
 
 [project.optional-dependencies]
 api = ["fastapi>=0.110,<1", "uvicorn[standard]>=0.29"]
-dev = ["fastapi>=0.110,<1", "uvicorn[standard]>=0.29", "pytest>=8", "httpx>=0.27"]
+postgres = ["psycopg[binary]>=3.2,<4"]
+dev = [
+    "fastapi>=0.110,<1",
+    "uvicorn[standard]>=0.29",
+    "psycopg[binary]>=3.2,<4",
+    "pytest>=8",
+    "httpx>=0.27",
+    "ruff>=0.17",
+    "import-linter>=2.16",
+    "pre-commit>=4",
+]
 
 [project.scripts]
 ai-store = "store.mcp_server:main"
@@ -31,3 +41,54 @@ include = ["store*"]
 pythonpath = ["."]
 testpaths = ["tests"]
 addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E", "W", # pycodestyle
+    "F",      # pyflakes
+    "I",      # import order
+    "UP",     # modern syntax for the target Python
+    "B",      # likely bugs
+    "SIM",    # simplifications
+    "C4",     # comprehensions
+    "PT",     # pytest style
+    "RUF",    # ruff-specific
+]
+ignore = [
+    "B008",  # FastAPI's Depends() in argument defaults is the intended pattern
+    "PT018", # compound asserts are fine in short tests
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["store", "scripts"]
+
+# Architecture rules, checked by `lint-imports` (pre-commit and CI).
+# Written for today's flat layout; when store/ is split into one package per domain,
+# change the module lists (e.g. store.catalog.services, store.api, store.agents) and
+# keep the three rules.
+[tool.importlinter]
+root_package = "store"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Services, models and schemas never import adapters"
+type = "forbidden"
+source_modules = ["store.services", "store.models", "store.schemas", "store.db", "store.config"]
+forbidden_modules = ["store.api", "store.mcp_server"]
+
+[[tool.importlinter.contracts]]
+name = "Adapters import services, never models"
+type = "forbidden"
+source_modules = ["store.api", "store.mcp_server"]
+forbidden_modules = ["store.models"]
+allow_indirect_imports = true # services importing models is fine; adapters doing it directly is not
+
+[[tool.importlinter.contracts]]
+name = "Business logic stays framework-free"
+type = "forbidden"
+source_modules = ["store.services", "store.models"]
+forbidden_modules = ["fastapi", "starlette", "mcp"]

@@ -5,6 +5,7 @@ but it exposes the same store to a future web frontend, scripts or webhooks.
 
 Run: uvicorn store.api:app --reload   ->  http://127.0.0.1:8000/docs
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterator

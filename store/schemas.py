@@ -1,4 +1,5 @@
 """Pydantic schemas: the contract shared by the REST API and the MCP tools."""
+
 from __future__ import annotations
 
 from decimal import ROUND_HALF_UP, Decimal

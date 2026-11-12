@@ -1,5 +1,6 @@
 """Business logic. Framework-free: FastAPI routes and MCP tools are thin adapters over these
 functions, so both front doors enforce exactly the same rules."""
+
 from __future__ import annotations
 
 from decimal import Decimal

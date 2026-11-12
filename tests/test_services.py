@@ -48,7 +48,9 @@ def test_low_stock_filter(session):
     assert [p.sku for p in services.list_products(session, low_stock_only=True)] == ["B"]
 
 
-@pytest.mark.parametrize("bad", [{"price": Decimal("0")}, {"price": Decimal("1.999")}, {"sku": "bad sku"}, {"initial_stock": -1}])
+@pytest.mark.parametrize(
+    "bad", [{"price": Decimal("0")}, {"price": Decimal("1.999")}, {"sku": "bad sku"}, {"initial_stock": -1}]
+)
 def test_schema_validation(bad):
     data = {"sku": "OK-1", "name": "x", "price": Decimal("1.00")} | bad
     with pytest.raises(ValidationError):
