@@ -5,7 +5,7 @@ description: Run a small e-commerce catalog through the ai-store MCP server - ad
 
 # Store Manager
 
-Operate the `ai-store` MCP server as the store's back office. The server holds the catalog (products, EUR prices, stock) in SQLite; you are the interface.
+Operate the `ai-store` MCP server as the store's back office. The server holds the catalog (products, EUR prices, stock) in Postgres; you are the interface.
 
 ## Requirements
 
@@ -18,13 +18,9 @@ The `ai-store` MCP server must be connected. Check that these tools exist before
 | `update_price(sku, new_price)` | Changing a price. Returns old and new price. |
 | `adjust_stock(sku, delta)` | Restocking (positive) or recording sales/write-offs (negative). |
 
-If the tools are missing, stop and tell the user to install the server. With [uv](https://docs.astral.sh/uv/) installed, Claude Code users run:
+If the tools are missing, stop and tell the user to set up the server from a source checkout (Postgres, migrations, Claude Desktop config). Full instructions: https://github.com/AnasMehfooz/mcp. Do not simulate store data.
 
-```bash
-claude mcp add ai-store -- uvx --from git+https://github.com/AnasMehfooz/mcp ai-store
-```
-
-Claude Desktop users add `"ai-store": {"command": "uvx", "args": ["--from", "git+https://github.com/AnasMehfooz/mcp", "ai-store"]}` under `mcpServers` in `claude_desktop_config.json` and restart. Full instructions: https://github.com/AnasMehfooz/mcp. Do not simulate store data.
+If a tool answers that the database is not reachable, has no tables or has no store, pass on the command it names and wait for the user. Do not retry in a loop.
 
 ## Ground rules
 

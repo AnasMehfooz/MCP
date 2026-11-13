@@ -1,9 +1,9 @@
 # Dev infrastructure only: Postgres (pgvector) and Phoenix tracing.
 # The app and Ollama run natively on the host; the app is containerized in phase 6.
 #
-#   docker compose up -d            start both
-#   docker compose up -d postgres   database only (saves RAM when not tracing)
-#   docker compose down -v          stop and wipe all data
+#   docker compose up -d --wait            start both, return when the database is ready
+#   docker compose up -d --wait postgres   database only (saves RAM when not tracing)
+#   docker compose down -v                 stop and wipe all data
 #
 # Ports bind to 127.0.0.1 only. Override credentials and ports in .env (see .env.example).
 name: ai-store
@@ -22,7 +22,9 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./docker/initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      # Over TCP on purpose: while the init scripts run, Postgres only listens on its socket,
+      # so the container turns healthy only once both databases exist.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
       retries: 10

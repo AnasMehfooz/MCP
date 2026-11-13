@@ -49,6 +49,8 @@ addopts = "-q"
 [tool.ruff]
 line-length = 120
 target-version = "py311"
+# An export of the project doc: kept as exported, so ruff does not reformat its code blocks.
+extend-exclude = ["docs/BLUEPRINT.md"]
 
 [tool.ruff.lint]
 select = [
