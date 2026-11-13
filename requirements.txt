@@ -7,6 +7,7 @@ pydantic>=2.6,<3
 pydantic-settings>=2.6,<3
 fastapi>=0.110,<1
 uvicorn[standard]>=0.29
+stripe>=17,<18
 
 # dev
 pytest>=8

@@ -10,7 +10,8 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from store.api.routes import products
+from store.api.routes import products, webhooks
 
 app = FastAPI(title="Headless AI Store", version="0.1.0")
 app.include_router(products.router)
+app.include_router(webhooks.router)
