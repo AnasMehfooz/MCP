@@ -1,50 +1,54 @@
-"""Engine and session handling. The API and the MCP server are separate processes
-sharing one SQLite file, so WAL mode and a busy timeout are enabled. With
-STORE_DATABASE_URL set (Postgres), the SQLite-specific setup is skipped."""
+"""Engine, declarative Base and session handling for Postgres 16 with pgvector.
+
+Tables are created and changed by Alembic (`alembic upgrade head`), never at startup.
+"""
 
 from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import datetime
+from typing import Any, ClassVar
+from uuid import UUID
 
-from sqlalchemy import Engine, create_engine, event
+from sqlalchemy import DateTime, Engine, MetaData, Text, Uuid, create_engine
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-from store.config import DATABASE_URL, DB_PATH
+from store.config import settings
+
+# Every constraint gets a predictable name, so migrations can alter or drop it and services
+# can tell which one an IntegrityError violated.
+NAMING_CONVENTION = {
+    "ix": "ix_%(table_name)s_%(column_0_N_name)s",
+    "uq": "uq_%(table_name)s_%(column_0_N_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
 
 
 class Base(DeclarativeBase):
-    pass
+    metadata = MetaData(naming_convention=NAMING_CONVENTION)
+    # Column types for plain annotations: Mapped[str] is text, Mapped[datetime] is timestamptz.
+    type_annotation_map: ClassVar[dict[Any, Any]] = {
+        str: Text,
+        datetime: DateTime(timezone=True),
+        UUID: Uuid,
+        dict[str, Any]: JSONB,
+    }
 
 
-def make_engine(url: str = DATABASE_URL) -> Engine:
-    if not url.startswith("sqlite"):
-        return create_engine(url, pool_pre_ping=True)
-
-    if url == DATABASE_URL:
-        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-
-    engine = create_engine(url, connect_args={"check_same_thread": False, "timeout": 15})
-
-    @event.listens_for(engine, "connect")
-    def _sqlite_pragmas(dbapi_conn, _record) -> None:
-        cur = dbapi_conn.cursor()
-        cur.execute("PRAGMA foreign_keys=ON")
-        cur.execute("PRAGMA journal_mode=WAL")  # API and MCP server can read/write concurrently
-        cur.close()
-
-    return engine
+def make_engine(url: str | None = None) -> Engine:
+    # pool_pre_ping: the MCP server lives as long as Claude Desktop does, and the database
+    # container may restart underneath it.
+    return create_engine(url or settings.database_url, pool_pre_ping=True)
 
 
 engine = make_engine()
 DATABASE_LABEL = engine.url.render_as_string(hide_password=True)  # safe to log
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
-
-
-def init_db(bind: Engine = engine) -> None:
-    from store.catalog import models  # noqa: F401  (register tables on Base.metadata)
-
-    Base.metadata.create_all(bind)
 
 
 @contextmanager
@@ -59,3 +63,8 @@ def session_scope(factory: sessionmaker[Session] = SessionLocal) -> Iterator[Ses
         raise
     finally:
         session.close()
+
+
+def violated_constraint(exc: IntegrityError) -> str | None:
+    """Name of the constraint behind an IntegrityError, from the driver's diagnostics."""
+    return getattr(getattr(exc.orig, "diag", None), "constraint_name", None)

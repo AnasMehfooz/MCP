@@ -1,37 +1,49 @@
-"""Settings shared by the API and the MCP server.
+"""Settings shared by every entry point: API, MCP server, Alembic and scripts.
 
-Claude Desktop launches the MCP server from an unpredictable working directory,
-and `uvx` installs the package into a throwaway cache, so the database path is
-always resolved to an absolute location the user owns.
-
-Resolution order:
-1. STORE_DB_PATH, if set.
-2. <project>/data/store.db, if it already exists (keeps data from source checkouts).
-3. ~/.ai-store/store.db (default for installed copies).
-
-STORE_DATABASE_URL, if set, replaces the SQLite file with any SQLAlchemy URL,
-e.g. postgresql+psycopg://store:store@localhost:5432/store (see docker-compose.yml).
+Values come from environment variables first, then from <project>/.env, then from the
+defaults below. Claude Desktop launches the MCP server from an unpredictable working
+directory, so the .env file is located from this file's path, never from the current
+directory.
 """
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
+from uuid import UUID
+
+from pydantic import Field, SecretStr, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-LEGACY_DB_PATH = PROJECT_ROOT / "data" / "store.db"
-DEFAULT_DB_PATH = Path.home() / ".ai-store" / "store.db"
 
 
-def resolve_db_path(env: dict[str, str] | os._Environ[str] = os.environ) -> Path:
-    if override := env.get("STORE_DB_PATH"):
-        return Path(override).expanduser().resolve()
-    if LEGACY_DB_PATH.exists():
-        return LEGACY_DB_PATH.resolve()
-    return DEFAULT_DB_PATH.resolve()
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=PROJECT_ROOT / ".env",
+        env_file_encoding="utf-8",
+        env_ignore_empty=True,  # `STORE_ID=` in .env means "not set"
+        extra="ignore",  # .env also carries the docker-compose variables
+    )
+
+    # Default: the database from docker-compose.yml.
+    database_url: str = Field(
+        default="postgresql+psycopg://store:store@localhost:5432/store", validation_alias="STORE_DATABASE_URL"
+    )
+    # The store this process works on. Unset: the only store in the database, if there is exactly one.
+    store_id: UUID | None = Field(default=None, validation_alias="STORE_ID")
+    low_stock_threshold: int = Field(default=5, ge=0, validation_alias="STORE_LOW_STOCK_THRESHOLD")
+    # `whsec_...`, printed by `stripe listen`. Unset: the webhook route rejects every request.
+    stripe_webhook_secret: SecretStr | None = Field(default=None, validation_alias="STRIPE_WEBHOOK_SECRET")
+
+    @field_validator("database_url")
+    @classmethod
+    def _postgres_with_psycopg(cls, url: str) -> str:
+        scheme, _, rest = url.partition("://")
+        if scheme in ("postgres", "postgresql"):  # no driver given: use the one this project installs
+            return f"postgresql+psycopg://{rest}"
+        if not scheme.startswith("postgresql+"):
+            raise ValueError("must be a postgresql:// URL; the store needs Postgres with pgvector")
+        return url
 
 
-DB_PATH = resolve_db_path()
-DATABASE_URL = os.getenv("STORE_DATABASE_URL") or f"sqlite:///{DB_PATH}"
-
-LOW_STOCK_THRESHOLD = int(os.getenv("STORE_LOW_STOCK_THRESHOLD", "5"))
+settings = Settings()

@@ -4,24 +4,21 @@ and calls its tools through the official MCP client."""
 import os
 import re
 import sys
-from pathlib import Path
 
 import anyio
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 
-ROOT = Path(__file__).resolve().parent.parent
+from store.config import PROJECT_ROOT
 
 
-async def _session_calls(db_env: dict[str, str]) -> dict:
-    # Drop any inherited URL so a SQLite run can never reach a real database.
-    base_env = {k: v for k, v in os.environ.items() if k != "STORE_DATABASE_URL"}
+async def _session_calls(env: dict[str, str]) -> dict:
     params = StdioServerParameters(
         command=sys.executable,
         args=["-m", "store.mcp_server"],
-        cwd=str(ROOT),
-        env={**base_env, **db_env},
+        cwd=str(PROJECT_ROOT),
+        env={**os.environ, **env},
     )
     results = {}
     async with stdio_client(params) as (read, write), ClientSession(read, write) as client:
@@ -38,9 +35,10 @@ async def _session_calls(db_env: dict[str, str]) -> dict:
     return results
 
 
-def test_claude_desktop_style_session(tmp_path, pg_url):
-    db_env = {"STORE_DATABASE_URL": pg_url} if pg_url else {"STORE_DB_PATH": str(tmp_path / "store.db")}
-    r = anyio.run(_session_calls, db_env)
+def test_claude_desktop_style_session(db_url, engine, session_factory, store_id):
+    # The server gets its database and its store from the environment, as in claude_desktop_config.json.
+    env = {"STORE_DATABASE_URL": db_url, "STORE_ID": str(store_id), "STORE_LOW_STOCK_THRESHOLD": "5"}
+    r = anyio.run(_session_calls, env)
 
     assert r["tools"] == ["add_product", "adjust_stock", "check_inventory", "update_price"]
 
@@ -62,11 +60,12 @@ def test_claude_desktop_style_session(tmp_path, pg_url):
 
     assert r["bad_price"].is_error
 
-    # The tool calls really hit the database the server was pointed at.
-    if pg_url:
-        engine = create_engine(pg_url)
-        with engine.connect() as conn:
-            assert conn.scalar(text("SELECT count(*) FROM products")) == 1
-        engine.dispose()
-    else:
-        assert (tmp_path / "store.db").exists()
+    # The tool calls really hit Postgres, in the store the environment named.
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text(
+                "SELECT p.store_id, p.handle, v.sku, v.price_cents, i.quantity "
+                "FROM products p JOIN variants v ON v.product_id = p.id JOIN inventory i ON i.variant_id = v.id"
+            )
+        ).all()
+    assert rows == [(store_id, "black-t-shirt-m", "TSHIRT-BLK-M", 2499, 3)]

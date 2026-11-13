@@ -1,0 +1,16 @@
+Database migrations (Alembic). Run every command from the project root.
+
+    alembic upgrade head                                        apply all migrations
+    alembic revision --autogenerate -m "orders" --rev-id 0002   new migration from model changes
+    alembic upgrade head --sql                                  print the SQL instead of running it
+    alembic check                                               fail if models and migrations differ
+    alembic downgrade -1                                        undo the latest migration
+
+Rules of the road:
+
+- Change the SQLAlchemy models first, then autogenerate, then read the generated file.
+  Autogenerate misses some things (renames look like drop + add, extensions, data moves).
+- Number revisions in order with --rev-id (0002, 0003, ...).
+- A model in a new domain package must be imported in store/metadata.py, or Alembic
+  will not see its tables.
+- tests/test_migrations.py fails when models and migrations disagree.
