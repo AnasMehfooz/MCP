@@ -78,7 +78,8 @@ class Variant(Base):
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
     # Repeated from the product so the SKU can be unique per store.
     store_id: Mapped[UUID] = mapped_column(ForeignKey("stores.id", ondelete="CASCADE"))
-    product_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("products.id", ondelete="CASCADE"))
+    # Indexed: Postgres does not index foreign keys itself, and joins and cascades use this column.
+    product_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("products.id", ondelete="CASCADE"), index=True)
     sku: Mapped[str]
     options: Mapped[dict[str, Any]] = mapped_column(server_default=text("'{}'::jsonb"))  # {"size": "M"}
     price_cents: Mapped[int] = mapped_column(Integer)
@@ -104,7 +105,7 @@ class ProductImage(Base):
     __tablename__ = "product_images"
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
-    product_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("products.id", ondelete="CASCADE"))
+    product_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("products.id", ondelete="CASCADE"), index=True)
     url: Mapped[str]
     alt_text: Mapped[str | None]
     position: Mapped[int] = mapped_column(SmallInteger, server_default=text("0"))
